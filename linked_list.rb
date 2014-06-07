@@ -21,7 +21,6 @@ class V
   end
 end
 
-
 d = V.new("d", nil)
 c = V.new("c", d)
 b = V.new("b", c)

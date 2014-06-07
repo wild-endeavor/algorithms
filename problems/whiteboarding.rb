@@ -48,4 +48,46 @@ def pair_sum(arr, k)
   pairs
 
 end
-p pair_sum([1, 2, -1, -1, -2], 0)
+# p pair_sum([1, 2, -1, -1, -2], 0)
+
+def max_sub_sum(arr)
+  max = 0
+  max_l = 0
+  max_r = 0
+  current_max = 0
+  left = 0
+
+  arr.size.times do |i|
+    current_max += arr[i]
+
+    if current_max < 0
+      left = i + 1
+      current_max = 0
+    elsif current_max > max
+      max = current_max
+      max_l, max_r = left, i
+    end
+  end
+
+  arr[max_l..max_r]
+end
+
+
+p max_sub_sum([10, -5, 8])
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
