@@ -33,7 +33,7 @@ def hills(arr)
   end
   puts "Final array:"
   p arr
-  arr
+  proper_max
 end
  
 
