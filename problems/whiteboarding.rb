@@ -24,7 +24,7 @@ end
 # p longest("catf", "attacatf")
 
 
-# **********************  Numbers ********************** #
+# **********************  Arrays and Numbers ********************** #
 def droot(num)
   while num > 10
     num = num / 10 + num % 10
@@ -71,12 +71,33 @@ def max_sub_sum(arr)
 
   arr[max_l..max_r]
 end
-
-
 p max_sub_sum([10, -5, 8])
 
+def max_subsequence(arr)
+  max = 0
+  current_max = 0
+  l_idx = 0
+  r_idx = 0
+  left = 0
+
+  arr.each_index do |idx|
+    current_max += arr[idx]
+
+    if current_max < 0
+      left = idx + 1
+      current_max = 0
+    elsif current_max > max
+      max = current_max
+      l_idx = left
+      r_idx = idx
+    end
+  end
+  [l_idx, r_idx]
+end
 
 
+arr = [-2, 1, -3, 4, -1, 2, 1, -5, 4]
+p max_subsequence(arr)
 
 
 
