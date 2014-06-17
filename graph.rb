@@ -1,14 +1,16 @@
 #!/usr/bin/env ruby
-module GraphLibrary
 
+module GraphLibrary
+  require 'set'
   class Vertex
-    attr_accessor :label, :edges_outgoing, :edges_incoming,
+    attr_accessor :label, :edges_outgoing, :edges_incoming, :edges_all,
       :explored, :finishing_time, :starting_vertex
 
     def initialize(label)
       @label = label
       @edges_outgoing = []
       @edges_incoming = []
+      @edges_all = [] # used for undirected graphs
       @explored = false
       @finishing_time = nil
       @starting_vertex = nil
@@ -23,7 +25,7 @@ module GraphLibrary
   end
 
   class Edge
-    attr_accessor :source, :dest
+    attr_accessor :source, :dest, :length
 
     def initialize(source, dest)
       @source = source
@@ -39,11 +41,15 @@ module GraphLibrary
 
     attr_accessor :vertices, :edges, :finishing_time, :sccs
 
-    def initialize(filename)
+    def initialize(filename, mode)
       @vertices = []
       @edges = []
       @finishing_time = 0
-      @vertices, @edges = *Graph.load(filename)
+      if mode == 0
+        @vertices, @edges = *Graph.load(filename)
+      elsif mode == 1
+        @vertices, @edges = *Graph.load_with_weights(filename)
+      end
       @sccs = Hash.new { 0 }
     end
 
@@ -64,13 +70,52 @@ module GraphLibrary
       [vtx, edges]
     end
 
+    def self.load_with_weights(filename)
+      vtx = {}
+      edges = {}
+      File.open(filename, "r") do |file|
+        file.each_line do |line|
+          line_arr = line.chomp.split(/\s+/)
+          source_label = line_arr.shift
+          vtx[source_label] = vtx[source_label] || Vertex.new(source_label)
+          line_arr.each do |pairing|
+            dest_label, length = pairing.split(/,/)
+            length = Integer(length) # does not do floats!
+            vtx[dest_label] = vtx[dest_label] || Vertex.new(dest_label)
+            edge = edges["#{source_label}-#{dest_label}"]
+            if edge.nil?
+              edge = Edge.new(vtx[source_label], vtx[dest_label])
+              edge.length = length
+              edges["#{source_label}-#{dest_label}"] = edge
+              edges["#{dest_label}-#{source_label}"] = edge
+            end
+          end
+        end
+      end
+
+      vtx = vtx.map { |k, v| v }
+      edges = edges.map { |k, v| v }
+      edges.uniq!
+
+      Graph.populate_edges_undirected(edges)
+      [vtx, edges]
+    end
+
     # This should take vertices and edges and populate the edges array of the vertices
+    # Use this method for directed graphs
     def self.populate_edges(edges)
       edges.each do |edge|
         edge.source.edges_outgoing << edge
         edge.dest.edges_incoming << edge
       end
       edges
+    end
+
+    def self.populate_edges_undirected(edges)
+      edges.each do |edge|
+        edge.source.edges_all << edge
+        edge.dest.edges_all << edge
+      end
     end
 
     def scc_dfs_loop(reverse = false)
@@ -181,24 +226,81 @@ module GraphLibrary
       self.vertices.sort_by! { |v| -v.finishing_time }
       self.scc_dfs_loop_stack(false)
     end
+
+    def dijkstras(source)
+      if (self.vertices.index(source).nil?)
+        raise "Could not find source vertex"
+      end
+      self.vertices.each { |v| v.explored = false }
+
+      distances = {}
+      distances[source.label] = 0
+      source.explored = true
+      edge_collection = source.edges_all.dup
+
+      while !edge_collection.empty?
+        min_edge = nil
+        min_distance = nil
+        # unexplored_vertex = nil
+        # explored_vertex = nil
+        edge_collection.each do |edge|
+          if !(edge.source.explored ^ edge.dest.explored)
+            raise "error with sets and exploration"
+          end
+          # TODO: factor this out
+          unexplored_vertex = edge.source.explored ? edge.dest : edge.source
+          explored_vertex = edge.source.explored ? edge.source : edge.dest
+          total_distance = distances[explored_vertex.label] + edge.length
+          if min_distance.nil? || total_distance < min_distance
+            min_distance = total_distance
+            min_edge = edge
+          end
+        end
+        raise "min edge is nil" if min_edge.nil?
+
+        # TODO: factor this out
+        vertex_to_move = min_edge.source.explored ? min_edge.dest : min_edge.source
+        already_explored = min_edge.source.explored ? min_edge.source : min_edge.dest
+        distances[vertex_to_move.label] = distances[already_explored.label] +
+          min_edge.length
+        vertex_to_move.explored = true
+
+        vertex_to_move.edges_all.each do |edge|
+          if edge.source.explored && edge.dest.explored
+            idx = edge_collection.index(edge)
+            if idx
+              edge_collection.delete_at(idx)
+            else
+              puts "hmmmm"
+            end
+          end
+
+          if edge.source.explored ^ edge.dest.explored
+            idx = edge_collection.index(edge)
+            if !idx
+              edge_collection << edge
+            end
+          end
+        end
+      end
+      distances
+    end
   end
 end
 
-# g = GraphLibrary::Graph.new("./sample_scc.txt")
-# p g.vertices
-# g.scc
-# p g.vertices
-# p g.sccs
-
+# Code to run strongly connected components
 # g2 = GraphLibrary::Graph.new("./sample_scc.txt")
 # p g2.vertices
 # g2.scc_stack
 # p g2.vertices
 # p g2.sccs
 
-gf = GraphLibrary::Graph.new("./scc.txt")
-# p gf.vertices
-gf.scc_stack
-# p gf.vertices
-p gf.sccs.values.sort.reverse
+# g = GraphLibrary::Graph.new("./sample_scc.txt", 0)
+
+g = GraphLibrary::Graph.new("dijkstraData.txt", 1)
+output = g.dijkstras(g.vertices[0])
+vtx = [7,37,59,82,99,115,133,165,188,197]
+vtx.each do |ele|
+  print output[ele.to_s].to_s + ","
+end
 
