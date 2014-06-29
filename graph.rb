@@ -271,7 +271,7 @@ module GraphLibrary
             if idx
               edge_collection.delete_at(idx)
             else
-              puts "hmmmm"
+              raise "error: something bad happened"
             end
           end
 
