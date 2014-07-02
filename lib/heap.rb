@@ -64,8 +64,8 @@ class Heap
     return if self.heap.length == 0
     current = 0
     while left_child_idx(current) < self.heap.length
-      # if the right child exists
       left_value = self.heap[left_child_idx(current)]
+      # if the right child exists
       if right_child_idx(current) < self.heap.length
         right_value = self.heap[right_child_idx(current)]
         if self.heap[current] <= left_value && self.heap[current] <= right_value
